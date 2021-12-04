@@ -42,4 +42,4 @@ python ./codes/main.py \
   --model ${model} \
   --opt train${suffix}.yml \
   --gpu_id ${gpu_id} \
-  > ${exp_dir}/train/train${suffix}.log  2>&1 &
+  > ${exp_dir}/train/train${suffix}.log  2>&1
