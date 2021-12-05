@@ -60,16 +60,6 @@ class DiscriminatorBlocksSTNET_large(nn.Module):
             nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(256, affine=True),
             nn.LeakyReLU(0.2, inplace=True))
-        
-        self.block9 = nn.Sequential( 
-            nn.Conv2d(256, 256, kernel_size=4, stride=1, padding='same'),
-            nn.BatchNorm2d(256, affine=True),
-            nn.LeakyReLU(0.2, inplace=True))
-        
-        self.block10 = nn.Sequential(  # /32
-            nn.Conv2d(256, 256, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(256, affine=True),
-            nn.LeakyReLU(0.2, inplace=True))
 
     def forward(self, x):
         out1 = self.block1(x)
@@ -80,11 +70,9 @@ class DiscriminatorBlocksSTNET_large(nn.Module):
         out3 = self.block6(out3)
         out4 = self.block7(out3)
         out4 = self.block8(out4)
-        out5 = self.block9(out4)
-        out5 = self.block10(out5)
-        feature_list = [out1, out2, out3, out4, out5]
+        feature_list = [out1, out2, out3, out4]
 
-        return out5, feature_list
+        return out4, feature_list
 
 
 class STNetLarge(nn.Module):
@@ -135,16 +123,12 @@ class STNetLarge(nn.Module):
         n, t, c, lr_h, lr_w = lr_data.size()
         _, _, _, hr_h, hr_w = data.size()
 
-        s_size_x = self.spatial_size
-        s_size_y = self.spatial_size
+        s_size = self.spatial_size
         t = t // 3 * 3  # discard other frames
         n_clip = n * t // 3  # total number of 3-frame clips in all batches
 
-        c_size_x = int(s_size_x * args_dict['crop_border_ratio'])
-        n_pad_x = (s_size_x - c_size_x) // 2
-
-        c_size_y = int(s_size_y * args_dict['crop_border_ratio'])
-        n_pad_y = (s_size_y - c_size_y) // 2
+        c_size = int(s_size * args_dict['crop_border_ratio'])
+        n_pad = (s_size - c_size) // 2
 
 
         # ------------ compute forward & backward flow ------------ #
@@ -201,12 +185,11 @@ class STNetLarge(nn.Module):
         warp_data = warp_data.reshape(n_clip, c * 3, hr_h, hr_w)
         # remove border to increase training stability as proposed in TecoGAN
         warp_data = F.pad(
-            warp_data[..., n_pad_y: n_pad_y + c_size_y, n_pad_x: n_pad_x + c_size_x],
-            (n_pad_x * n_pad_y, ) * 2, mode='constant')
+            warp_data[..., n_pad: n_pad + c_size, n_pad: n_pad + c_size],
+            (n_pad,) * 4, mode='constant')
 
         # combine 3 parts together
         input_data = torch.cat([orig_data, warp_data, cond_data], dim=1)
-
 
         # ------------ classify ------------ #
         pred = self.forward(input_data)  # out, feature_list
@@ -362,7 +345,7 @@ class ViTNet(nn.Module):
         self.scale = scale
 
         # Vision Transformer
-        self.vit = ViT(image_size=spatial_size, patch_size=48, num_classes=1, dim=128, depth=4, heads=6,
+        self.vit = ViT(image_size=spatial_size, patch_size=32, num_classes=1, dim=128, depth=4, heads=6,
                        mlp_dim=128, pool='cls', channels=in_nc*tempo_range*mult, dim_head=64, dropout=0., emb_dropout=0.)
 
     def forward(self, x):
@@ -385,16 +368,12 @@ class ViTNet(nn.Module):
         n, t, c, lr_h, lr_w = lr_data.size()
         _, _, _, hr_h, hr_w = data.size()
 
-        s_size_x = self.spatial_size
-        s_size_y = self.spatial_size
+        s_size = self.spatial_size
         t = t // 3 * 3  # discard other frames
         n_clip = n * t // 3  # total number of 3-frame clips in all batches
 
-        c_size_x = int(s_size_x * args_dict['crop_border_ratio'])
-        n_pad_x = (s_size_x - c_size_x) // 2
-
-        c_size_y = int(s_size_y * args_dict['crop_border_ratio'])
-        n_pad_y = (s_size_y - c_size_y) // 2
+        c_size = int(s_size * args_dict['crop_border_ratio'])
+        n_pad = (s_size - c_size) // 2
 
 
         # ------------ compute forward & backward flow ------------ #
@@ -451,12 +430,11 @@ class ViTNet(nn.Module):
         warp_data = warp_data.reshape(n_clip, c * 3, hr_h, hr_w)
         # remove border to increase training stability as proposed in TecoGAN
         warp_data = F.pad(
-            warp_data[..., n_pad_y: n_pad_y + c_size_y, n_pad_x: n_pad_x + c_size_x],
-            (n_pad_x * n_pad_y, ) * 2, mode='constant')
+            warp_data[..., n_pad: n_pad + c_size, n_pad: n_pad + c_size],
+            (n_pad,) * 4, mode='constant')
 
         # combine 3 parts together
         input_data = torch.cat([orig_data, warp_data, cond_data], dim=1)
-
 
         # ------------ classify ------------ #
         pred = self.forward(input_data)  # out, feature_list
@@ -570,7 +548,7 @@ class MBConv(nn.Module):
                 nn.BatchNorm2d(oup),
             )
         
-        self.conv = PreNorm(inp, self.conv, nn.BatchNorm2d)
+        self.conv = PreNorm2(inp, self.conv, nn.BatchNorm2d)
 
     def forward(self, x):
         if self.downsample:
@@ -751,16 +729,12 @@ class CoAtNetwork(nn.Module):
         n, t, c, lr_h, lr_w = lr_data.size()
         _, _, _, hr_h, hr_w = data.size()
 
-        s_size_x = self.spatial_size
-        s_size_y = self.spatial_size
+        s_size = self.spatial_size
         t = t // 3 * 3  # discard other frames
         n_clip = n * t // 3  # total number of 3-frame clips in all batches
 
-        c_size_x = int(s_size_x * args_dict['crop_border_ratio'])
-        n_pad_x = (s_size_x - c_size_x) // 2
-
-        c_size_y = int(s_size_y * args_dict['crop_border_ratio'])
-        n_pad_y = (s_size_y - c_size_y) // 2
+        c_size = int(s_size * args_dict['crop_border_ratio'])
+        n_pad = (s_size - c_size) // 2
 
 
         # ------------ compute forward & backward flow ------------ #
@@ -817,12 +791,11 @@ class CoAtNetwork(nn.Module):
         warp_data = warp_data.reshape(n_clip, c * 3, hr_h, hr_w)
         # remove border to increase training stability as proposed in TecoGAN
         warp_data = F.pad(
-            warp_data[..., n_pad_y: n_pad_y + c_size_y, n_pad_x: n_pad_x + c_size_x],
-            (n_pad_x * n_pad_y, ) * 2, mode='constant')
+            warp_data[..., n_pad: n_pad + c_size, n_pad: n_pad + c_size],
+            (n_pad,) * 4, mode='constant')
 
         # combine 3 parts together
         input_data = torch.cat([orig_data, warp_data, cond_data], dim=1)
-
 
         # ------------ classify ------------ #
         pred = self.forward(input_data)  # out, feature_list

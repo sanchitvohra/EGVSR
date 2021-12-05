@@ -80,10 +80,10 @@ def define_discriminator(opt):
         
     elif net_D_opt['name'].lower() == 'coatnet':  # coatnet
         from .discriminator_nets import CoAtNetwork
-        net_D = SpatialDiscriminator(
+        net_D = CoAtNetwork(
             in_nc=net_D_opt['in_nc'],
             spatial_size=spatial_size,
-            use_cond=net_D_opt['use_cond'])
+            tempo_range=net_D_opt['tempo_range'])
 
     else:
         raise ValueError('Unrecognized discriminator: {}'.format(
