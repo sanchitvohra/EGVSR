@@ -46,7 +46,7 @@ def train(opt):
     logger.info('Total epochs needed: {} for {} iterations'.format(
         total_epoch, total_iter))
 
-    writer = SummaryWriter(opt['exp_dir'])
+    writer = SummaryWriter(os.path.join(opt['exp_dir'], 'train'))
 
     # train
     for epoch in range(total_epoch):
@@ -75,7 +75,7 @@ def train(opt):
                 # basic info
                 msg = '[epoch: {} | iter: {}'.format(epoch, curr_iter)
                 for lr_type, lr in model.get_current_learning_rate().items():
-                    writer.add_scalar(lr_type, lr)
+                    writer.add_scalar(lr_type, lr, curr_iter)
                     msg += ' | {}: {:.2e}'.format(lr_type, lr)
                 msg += '] '
 
@@ -85,7 +85,7 @@ def train(opt):
                     '{}: {:.3e}'.format(k, v) for k, v in log_dict.items()])
 
                 for k, v in log_dict.items():
-                    writer.add_scalar(k, v)
+                    writer.add_scalar(k, v, curr_iter)
 
                 logger.info(msg)
 
@@ -143,7 +143,7 @@ def train(opt):
                         # save results to json file
                         json_path = osp.join(
                             opt['test']['json_dir'], '{}_avg.json'.format(ds_name))
-                        metric_calculator.save_results(model_idx, json_path, writer, override=True)
+                        metric_calculator.save_results(model_idx, json_path, writer, curr_iter, override=True)
                     else:
                         # print directly
                         metric_calculator.display_results()

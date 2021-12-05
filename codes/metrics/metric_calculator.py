@@ -101,7 +101,7 @@ class MetricCalculator():
             logger.info('\t{}: {:.6f} (x{})'.format(
                 metric_type, mult*avg_result, mult))
 
-    def save_results(self, model_idx, save_path, writer, override=False):
+    def save_results(self, model_idx, save_path, writer, curr_iter, override=False):
         # load previous results if existed
         if osp.exists(save_path):
             with open(save_path, 'r') as f:
@@ -120,7 +120,7 @@ class MetricCalculator():
                 continue
 
             json_dict[model_idx][metric_type] = '{:.6f}'.format(avg_result)
-            writer.add_scalar(metric_type, avg_result)
+            writer.add_scalar(metric_type, avg_result, curr_iter)
 
         # sort
         json_dict = OrderedDict(sorted(

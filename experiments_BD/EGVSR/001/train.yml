@@ -16,7 +16,7 @@ dataset:
     filter_file: ~
     data_type: rgb
     crop_size: 128
-    batch_size: 8
+    batch_size: 4
     num_workers: 4
     pin_memory: true
 
@@ -39,7 +39,7 @@ model:
     out_nc: 3
     nf: 64
     nb: 10
-    load_path: pretrained_models/G_iter400000.pth
+    load_path: ~ # pretrained_models/G_iter400000.pth
 
   discriminator:
     name: STNet  # spatio-temporal network
@@ -53,13 +53,15 @@ train:
   tempo_extent: 10
 
   start_iter: 0
-  total_iter: 500000
+  total_iter: 100000
 
   # configs for generator
   generator:
-    lr: !!float 5e-5
+    lr: !!float 1e-4
     lr_schedule:
-      type: FixedLR
+      type: MultiStepLR
+      milestones: [5e4, 8e4]
+      gamma: 0.25
     beta1: 0.9
     beta2: 0.999
 
@@ -68,9 +70,11 @@ train:
     update_policy: adaptive
     update_threshold: 0.4
     crop_border_ratio: 0.75
-    lr: !!float 5e-5
+    lr: !!float 1e-4
     lr_schedule:
-      type: FixedLR
+      type: MultiStepLR
+      milestones: [5e4, 8e4]
+      gamma: 0.25
     beta1: 0.9
     beta2: 0.999
 
@@ -108,7 +112,7 @@ train:
 
 # validation configs
 test:
-  test_freq: 5000
+  test_freq: 1000
 
   # whether to save the generated SR results
   save_res: false

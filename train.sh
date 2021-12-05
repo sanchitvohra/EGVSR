@@ -36,10 +36,10 @@ cp -r ./codes ${exp_dir}/train/codes_backup${suffix}
 
 
 # run
-python ./codes/main.py \
+python3 ./codes/main.py \
   --exp_dir ${exp_dir} \
   --mode train \
   --model ${model} \
   --opt train${suffix}.yml \
   --gpu_id ${gpu_id} \
-  > ${exp_dir}/train/train${suffix}.log  2>&1 &
+  > ${exp_dir}/train/train${suffix}.log  2>&1
