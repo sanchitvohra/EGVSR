@@ -1,5 +1,8 @@
 
 
+from codes.models.networks.discriminator_nets import ViTNet
+
+
 def define_generator(opt):
     net_G_opt = opt['model']['generator']
 
@@ -60,6 +63,27 @@ def define_discriminator(opt):
 
     elif net_D_opt['name'].lower() == 'snet':  # spatial discriminator
         from .tecogan_nets import SpatialDiscriminator
+        net_D = SpatialDiscriminator(
+            in_nc=net_D_opt['in_nc'],
+            spatial_size=spatial_size,
+            use_cond=net_D_opt['use_cond'])
+        
+    elif net_D_opt['name'].lower() == 'stnet_large':  # spatial discriminator
+        from .discriminator_nets import STNetLarge
+        net_D = STNetLarge(
+            in_nc=net_D_opt['in_nc'],
+            spatial_size=spatial_size,
+            tempo_range=net_D_opt['tempo_range'])
+        
+    elif net_D_opt['name'].lower() == 'vit':  # spatial discriminator
+        from .discriminator_nets import SpatialDiscriminator
+        net_D = ViTNet(
+            in_nc=net_D_opt['in_nc'],
+            spatial_size=spatial_size,
+            tempo_range=net_D_opt['tempo_range'])
+        
+    elif net_D_opt['name'].lower() == 'coatnet':  # spatial discriminator
+        from .discriminator_nets import SpatialDiscriminator
         net_D = SpatialDiscriminator(
             in_nc=net_D_opt['in_nc'],
             spatial_size=spatial_size,
