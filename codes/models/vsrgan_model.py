@@ -5,7 +5,7 @@ import torch.optim as optim
 
 from .vsr_model import VSRModel
 from .networks import define_generator, define_discriminator
-from .networks.vgg_nets import VGGFeatureExtractor
+from .networks.res_nets import ResNet
 from .optim import define_criterion, define_lr_schedule
 from utils import net_utils
 
@@ -99,7 +99,7 @@ class VSRGANModel(VSRModel):
         if self.feat_crit is not None:  # load feature extractor
             feature_layers = self.opt['train']['feature_crit'].get(
                 'feature_layers', [8, 17, 26, 35])
-            self.net_F = VGGFeatureExtractor(feature_layers).to(self.device)
+            self.net_F = ResNet(feature_layers).to(self.device)
 
         # flow & mask criterion
         self.flow_crit = define_criterion(
