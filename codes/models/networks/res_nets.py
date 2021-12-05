@@ -7,7 +7,23 @@ class ResNet(nn.Module):
     def __init__(self, feature_indexs=(8, 17, 26, 35)):
         super(ResNet, self).__init__()
         # init feature layers
-        self.features = torchvision.models.resnet50(pretrained=True).features
+        res50_model = torchvision.models.resnet50(pretrained=True) # <--- .features is not a thing 
+        self.features = nn.Sequential(*list(res50_model.children())[:-2])
+
+        # resnet = torchvision.models.resnet50(pretrained=True)
+        """
+        features = intermediate layers = [
+                layers
+                #look up how to get intermediate layers 
+
+                -4 to the end 
+                4 to 5 
+                5 to 6 
+                6 to 7 
+        ]
+        """
+
+
         for param in self.features.parameters():
             param.requires_grad = False
 
