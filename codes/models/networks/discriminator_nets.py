@@ -345,8 +345,8 @@ class ViTNet(nn.Module):
         self.scale = scale
 
         # Vision Transformer
-        self.vit = ViT(image_size=spatial_size, patch_size=32, num_classes=1, dim=128, depth=4, heads=6,
-                       mlp_dim=128, pool='cls', channels=in_nc*tempo_range*mult, dim_head=64, dropout=0., emb_dropout=0.)
+        self.vit = ViT(image_size=spatial_size, patch_size=32, num_classes=1, dim=768, depth=12, heads=12,
+                       mlp_dim=3072, pool='cls', channels=in_nc*tempo_range*mult, dim_head=64, dropout=0., emb_dropout=0.)
 
     def forward(self, x):
         out, features = self.vit(x)
