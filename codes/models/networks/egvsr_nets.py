@@ -95,6 +95,63 @@ class ResidualBlock(nn.Module):
 
         return out
 
+class GlobalAttentionBlock(nn.Module):
+    def __init__(self, num_feat=64, patch_size=8, heads=1):
+        super(GlobalAttentionBlock, self).__init__()
+        self.heads = heads
+        self.patch_size = patch_size
+        self.dim = patch_size ** 2 * num_feat
+        self.hidden_dim = self.dim // heads
+        
+        self.to_q = nn.Conv2d(in_channels=num_feat, out_channels=num_feat, kernel_size=3, padding=1, groups=num_feat) 
+        self.to_k = nn.Conv2d(in_channels=num_feat, out_channels=num_feat, kernel_size=3, padding=1, groups=num_feat)
+        self.to_v = nn.Conv2d(in_channels=num_feat, out_channels=num_feat, kernel_size=3, padding=1)
+
+        self.conv = nn.Conv2d(in_channels=num_feat, out_channels=num_feat, kernel_size=3, padding=1)
+
+        self.feat2patch = torch.nn.Unfold(kernel_size=patch_size, padding=0, stride=patch_size)
+
+    def forward(self, x):
+        b, t, c, h, w = x.shape                              
+        H, D = self.heads, self.dim
+        
+        n = (h // self.patch_size) * (w // self.patch_size)
+        d = self.hidden_dim
+
+        q = self.to_q(x.view(-1, c, h, w))                   
+        k = self.to_k(x.view(-1, c, h, w))                 
+        v = self.to_v(x.view(-1, c, h, w))                    
+
+        unfold_q = self.feat2patch(q)
+        unfold_k = self.feat2patch(k)                            
+        unfold_v = self.feat2patch(v)                          
+
+        unfold_q = unfold_q.view(b, t, H, d, n)                
+        unfold_k = unfold_k.view(b, t, H, d, n)    
+        unfold_v = unfold_v.view(b, t, H, d, n)               
+
+        unfold_q = unfold_q.permute(0,2,3,1,4).contiguous()    
+        unfold_k = unfold_k.permute(0,2,3,1,4).contiguous()    
+        unfold_v = unfold_v.permute(0,2,3,1,4).contiguous()    
+
+        unfold_q = unfold_q.view(b, H, d, t*n)                 
+        unfold_k = unfold_k.view(b, H, d, t*n)                 
+        unfold_v = unfold_v.view(b, H, d, t*n)                 
+
+        attn = torch.matmul(unfold_q.transpose(2,3), unfold_k)
+        attn = attn * (d ** (-0.5))                            
+        attn = F.softmax(attn, dim=-1)                         
+
+        attn_x = torch.matmul(attn, unfold_v.transpose(2,3))  
+        attn_x = attn_x.view(b, H, t, n, d)                    
+        attn_x = attn_x.permute(0, 2, 1, 4, 3).contiguous()    
+        attn_x = attn_x.view(b*t, D, n)
+        
+        feat = F.fold(attn_x, output_size=(h,w), kernel_size=self.patch_size, padding=0, stride=self.patch_size)                       
+        out = self.conv(feat).view(x.shape)                    
+        out += x                                               
+
+        return out
 
 class SRNet(nn.Module):
     """ Reconstruction & Upsampling network
@@ -109,8 +166,11 @@ class SRNet(nn.Module):
             nn.Conv2d((scale**2 + 1) * in_nc, nf, 3, 1, 1, bias=True),
             nn.ReLU(inplace=True))
 
+        # input: (B, nf, H, W)
+
         # residual blocks
-        self.resblocks = nn.Sequential(*[ResidualBlock(nf) for _ in range(nb)])
+        # self.resblocks = nn.Sequential(*[ResidualBlock(nf) for _ in range(nb)])
+        self.resblocks = nn.Sequential(*[GlobalAttentionBlock(nf) for _ in range(5)])
 
         # upsampling
         self.conv_up = nn.Sequential(
@@ -133,9 +193,8 @@ class SRNet(nn.Module):
         """ lr_curr: the current lr data in shape nchw
             hr_prev_tran: the previous transformed hr_data in shape n(4*4*c)hw
         """
-
-        out = self.conv_in(torch.cat([lr_curr, hr_prev_tran], dim=1))
-        out = self.resblocks(out)
+        out = self.conv_in(torch.cat([lr_curr, hr_prev_tran], dim=1)).unsqueeze(1)
+        out = self.resblocks(out).squeeze(1)
         out = self.conv_up_cheap(out)
         out = self.conv_out(out)
         # out += self.upsample_func(lr_curr)

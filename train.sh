@@ -7,7 +7,7 @@
 # basic settings
 degradation=$1
 model=$2
-exp_id=001
+exp_id=002
 gpu_id=0
 
 
